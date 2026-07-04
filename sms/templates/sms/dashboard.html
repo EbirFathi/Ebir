@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ebir SMS — Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+  .header { background: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .header h1 { font-size: 1.4rem; font-weight: 700; color: #f59e0b; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; text-align: center; }
+  .stat-card .num { font-size: 2rem; font-weight: 700; color: #f59e0b; }
+  .stat-card .label { color: #64748b; font-size: 0.85rem; margin-top: 4px; }
+  .webhook-box { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 14px 18px; margin-bottom: 20px; font-size: 0.85rem; color: #94a3b8; }
+  .webhook-box code { color: #f59e0b; background: #0f172a; padding: 4px 8px; border-radius: 6px; font-size: 0.9rem; word-break: break-all; }
+  .filters { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+  .filters input { background: #1e293b; border: 1px solid #334155; border-radius: 8px; padding: 8px 14px; color: #e2e8f0; font-size: 0.9rem; }
+  .btn { background: #d97706; color: white; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: inline-block; }
+  .btn.secondary { background: #334155; }
+  .live-dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; margin-right: 6px; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+  .msg-card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; }
+  .msg-card.unread { border-left: 3px solid #f59e0b; }
+  .msg-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .msg-from { font-weight: 600; color: #f59e0b; }
+  .msg-date { color: #64748b; font-size: 0.8rem; }
+  .msg-body { color: #cbd5e1; line-height: 1.5; font-size: 0.9rem; margin-bottom: 12px; background: #0f172a; padding: 10px; border-radius: 8px; }
+  .infos-extraites { background: #0f172a; border-radius: 8px; padding: 12px; margin-bottom: 12px; display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .info-item { text-align: center; }
+  .info-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; }
+  .info-value { font-size: 1rem; font-weight: bold; color: #f0f9ff; margin-top: 2px; }
+  .statut { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; }
+  .statut.non_verifie { background: #1e3a5f; color: #60a5fa; }
+  .statut.correspond { background: #14532d; color: #4ade80; }
+  .statut.non_trouve { background: #7f1d1d; color: #f87171; }
+  .details { margin-top: 8px; font-size: 0.8rem; color: #64748b; }
+  .empty { text-align: center; padding: 60px 20px; color: #64748b; }
+  #notif { position: fixed; top: 16px; right: 16px; background: #d97706; color: white; padding: 12px 20px; border-radius: 10px; font-size: 0.9rem; display: none; z-index: 1000; }
+</style>
+</head>
+<body>
+<div class="header">
+  <h1>🇪🇹 Ebir SMS — Réception & Suivi ETB</h1>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <span><span class="live-dot"></span> En direct</span>
+    <a href="/admin/" class="btn secondary" style="font-size:0.8rem;">Admin</a>
+  </div>
+</div>
+
+<div class="container">
+  <div class="stats">
+    <div class="stat-card"><div class="num">{{ total }}</div><div class="label">Total SMS</div></div>
+    <div class="stat-card"><div class="num" style="color:#ef4444;">{{ non_lus }}</div><div class="label">Non lus</div></div>
+    <div class="stat-card"><div class="num" style="color:#22c55e;">{{ messages|length }}</div><div class="label">Affichés</div></div>
+  </div>
+
+  <div class="webhook-box">
+    📡 URL Webhook SMS Forwarder : <code>{{ webhook_url }}</code><br>
+    <span style="margin-top:6px;display:block;">Paramètre message : <code>message</code> — Paramètre from : <code>from</code></span>
+  </div>
+
+  <form method="get" class="filters">
+    <input type="text" name="expediteur" placeholder="Filtrer par numéro..." value="{{ filtre_expediteur }}">
+    <button type="submit" class="btn">Filtrer</button>
+    {% if filtre_expediteur %}<a href="/" class="btn secondary">Tout afficher</a>{% endif %}
+  </form>
+
+  {% if messages %}
+    {% for msg in messages %}
+    <div class="msg-card {% if not msg.lu %}unread{% endif %}">
+      <div class="msg-header">
+        <span class="msg-from">📞 {{ msg.expediteur }}</span>
+        <span class="msg-date">{{ msg.date_reception_serveur|date:"d/m/Y H:i:s" }}</span>
+      </div>
+      <div class="msg-body">{{ msg.contenu }}</div>
+
+      {% if msg.transfer_id or msg.montant or msg.numero_envoyeur %}
+      <div class="infos-extraites">
+        {% if msg.transfer_id %}
+        <div class="info-item">
+          <div class="info-label">🔑 Txn ID</div>
+          <div class="info-value">{{ msg.transfer_id }}</div>
+        </div>
+        {% endif %}
+        {% if msg.montant %}
+        <div class="info-item">
+          <div class="info-label">💰 Montant</div>
+          <div class="info-value" style="color:#f59e0b;">{{ msg.montant }}</div>
+        </div>
+        {% endif %}
+        {% if msg.numero_envoyeur %}
+        <div class="info-item">
+          <div class="info-label">📱 Numéro</div>
+          <div class="info-value">{{ msg.numero_envoyeur }}</div>
+        </div>
+        {% endif %}
+        {% if msg.nom_envoyeur %}
+        <div class="info-item">
+          <div class="info-label">👤 Nom</div>
+          <div class="info-value">{{ msg.nom_envoyeur }}</div>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <span class="statut {{ msg.statut_verification }}">
+        {% if msg.statut_verification == 'non_verifie' %}⏳ En attente agent...
+        {% elif msg.statut_verification == 'correspond' %}✅ Confirmé par agent
+        {% else %}❌ Non trouvé
+        {% endif %}
+      </span>
+
+      {% if msg.details_verification %}
+      <div class="details">{{ msg.details_verification }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty">
+      <p style="font-size:3rem">📭</p>
+      <p style="margin-top:10px">Aucun SMS reçu pour le moment</p>
+      <p style="margin-top:8px;font-size:0.85rem;color:#475569;">Les SMS Telebirr / CBE / HelloCash apparaîtront ici dès réception.</p>
+    </div>
+  {% endif %}
+</div>
+
+<div id="notif">📩 Nouveau SMS reçu !</div>
+
+<script>
+let dernierID = {{ messages.0.id|default:0 }};
+async function verifierNouveauxMessages() {
+  try {
+    const resp = await fetch('/api/messages/?depuis_id=' + dernierID);
+    const data = await resp.json();
+    if (data.messages && data.messages.length > 0) {
+      dernierID = data.messages[0].id;
+      document.getElementById('notif').style.display = 'block';
+      setTimeout(() => { document.getElementById('notif').style.display = 'none'; location.reload(); }, 2000);
+    }
+  } catch(e) {}
+}
+setInterval(verifierNouveauxMessages, 5000);
+</script>
+</body>
+</html>

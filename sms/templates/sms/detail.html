@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Ebir SMS — Détail</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; padding: 24px; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; max-width: 700px; margin: 0 auto; }
+  h2 { color: #f59e0b; margin-bottom: 20px; }
+  .field { margin-bottom: 14px; }
+  .label { font-size: 0.75rem; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+  .value { color: #e2e8f0; background: #0f172a; padding: 10px 14px; border-radius: 8px; font-size: 0.95rem; word-break: break-word; }
+  .btn { background: #d97706; color: white; border: none; border-radius: 8px; padding: 8px 16px; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: inline-block; margin-top: 16px; margin-right: 8px; }
+  .btn.danger { background: #dc2626; }
+  .btn.secondary { background: #334155; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h2>📩 Détail SMS #{{ msg.id }}</h2>
+
+  <div class="field"><div class="label">Expéditeur</div><div class="value">{{ msg.expediteur }}</div></div>
+  <div class="field"><div class="label">Date réception</div><div class="value">{{ msg.date_reception_serveur|date:"d/m/Y H:i:s" }}</div></div>
+  <div class="field"><div class="label">Contenu</div><div class="value" style="white-space:pre-wrap;">{{ msg.contenu }}</div></div>
+
+  {% if msg.transfer_id %}<div class="field"><div class="label">Transaction ID</div><div class="value" style="color:#f59e0b;font-weight:bold;">{{ msg.transfer_id }}</div></div>{% endif %}
+  {% if msg.montant %}<div class="field"><div class="label">Montant ETB</div><div class="value" style="color:#22c55e;font-weight:bold;">{{ msg.montant }}</div></div>{% endif %}
+  {% if msg.numero_envoyeur %}<div class="field"><div class="label">Numéro envoyeur</div><div class="value">{{ msg.numero_envoyeur }}</div></div>{% endif %}
+  {% if msg.nom_envoyeur %}<div class="field"><div class="label">Nom envoyeur</div><div class="value">{{ msg.nom_envoyeur }}</div></div>{% endif %}
+
+  <div class="field"><div class="label">Statut</div><div class="value">{{ msg.get_statut_verification_display }}</div></div>
+  {% if msg.details_verification %}<div class="field"><div class="label">Détails</div><div class="value">{{ msg.details_verification }}</div></div>{% endif %}
+
+  <a href="/" class="btn secondary">← Retour</a>
+  <form method="post" action="/message/{{ msg.id }}/supprimer/" style="display:inline;">
+    {% csrf_token %}
+    <button type="submit" class="btn danger" onclick="return confirm('Supprimer ce message ?')">Supprimer</button>
+  </form>
+</div>
+</body>
+</html>
