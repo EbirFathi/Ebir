@@ -41,7 +41,7 @@ def extraire_infos_sms(contenu):
     # ── Montant ETB ──────────────────────────────────────────────────────────
     # Patterns: "ETB 1,000.00", "Birr 500", "1,000.00 ETB", "received ETB X from"
     for pattern in [
-        r'(?:ETB|Birr)\s+([\d,]+\.?\d*)',
+        r'(?:ETB|Birr)\s*([\d,]+\.?\d*)',
         r'([\d,]+\.?\d*)\s*(?:ETB|Birr)',
         r'Received\s+([\w\s,]+?)\s+from',
     ]:
